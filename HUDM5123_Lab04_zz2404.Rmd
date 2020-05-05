@@ -1,0 +1,68 @@
+---
+title: "HUDM5123_Lab04_zz2404"
+author: "Zhuqian Karen Zhou"
+date: "May 3, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Task 01: Descriptive Statistics
+```{r}
+library(emmeans)
+
+rct_wide$cesdGS <- rct_wide$cesdTotal.3 - rct_wide$cesdTotal.0 # calculate the change score
+
+lm2 <- lm(formula = cesdGS ~ int_fact, data = rct_wide) # fit the linear model
+
+emm2 <- emmeans(object=lm2, specs=~int_fact) # calculate marginal means
+s.emm2 <- summary(emm2) # get the summary table of the marginal means
+s.emm2
+
+m.SS <- s.emm2$emmean[which(s.emm2$int_fact=="SS")] # Mean(SS)
+se.SS <- s.emm2$SE[which(s.emm2$int_fact=="SS")] # SE(SS)
+t.135 <- qt(p=0.975, df=135, lower.tail = TRUE) # two-sided t-test, crit. value, df = 135, alpha=.05
+
+m.SS+t.135*se.SS # UL of the 95% C.I. = Mean(SS) + t(135)*SE(SS)
+m.SS-t.135*se.SS # LL of the 95% C.I. = Mean(SS) - t(135)*SE(SS)
+```
+
+# Task 02: Test a Single Factor Level Mean
+```{r}
+t.SS <- (m.SS-0)/se.SS  # calculate t-score of SS = (Mean(SS)-0)/SE(SS)
+2*pt(q = t.SS, df = 135, lower.tail = TRUE)# get p-value for two-sided t-test
+
+test(object=emm2,side="!=") # two-sided t-tests for every group
+```
+
+# Task 03: Testing Pairwise Comparisons
+```{r}
+m.TGT <- s.emm2$emmean[which(s.emm2$int_fact=="TGT")] # Mean(TGT)
+se.TGT <- s.emm2$SE[which(s.emm2$int_fact=="TGT")] # SE(TGT)
+se.SS.TGT <- (se.SS^2+se.TGT^2)^0.5 # sd(SS-TGT)=(SE(SS)^2+SE(TGT)^2)^0.5
+t.SS.TGT <- (m.SS-m.TGT-0)/se.SS.TGT # t-score of the CES-D change score difference between SS and TGT
+2*pt(q=t.SS.TGT, df=135, lower.tail = FALSE) # p-value of the difference score
+
+pairs(emm2,adjust="none") # pairwise comparison
+```
+
+# Task 04 Testing Linear Contrasts
+```{r}
+m.GV <- s.emm2$emmean[which(s.emm2$int_fact=="GV")] # Mean(GV)
+m.REM <- s.emm2$emmean[which(s.emm2$int_fact=="REM")] # Mean(REM)
+se.GV <- s.emm2$SE[which(s.emm2$int_fact=="GV")] # SE(GV)
+se.REM <- s.emm2$SE[which(s.emm2$int_fact=="REM")] # SE(REM)
+
+t.con <- (1/3*(m.SS+m.TGT+m.GV)-m.REM)/(1/9*(se.SS^2+se.TGT^2+se.GV^2)+se.REM^2)^0.5 # t-score of the linear contrast
+pt(q=t.con, df=135, lower.tail = TRUE) # p-value of the linear contrast
+
+contrast(emm2, method=list(c(1/3,1/3,1/3,-1)))
+```
+
+# Task 05 Testing Linear Contrasts (Cont.)
+```{r}
+contrast(emm2, method=list(c(0,1/2,1/2,-1)))
+```
+
